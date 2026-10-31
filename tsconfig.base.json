@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    /* Environment & Module Resolution */
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ESNext"],
+    "moduleDetection": "force",
+
+    /* Strict Typechecking */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "exactOptionalPropertyTypes": true,
+
+    /* Modern Emit & Transpilation Rules */
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Source Maps & Declarations */
+    "sourceMap": true,
+  }
+}
