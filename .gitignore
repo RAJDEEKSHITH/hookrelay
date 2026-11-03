@@ -37,5 +37,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 
-generate-strcture.js
-PROJECT_STRCTURE.md
+generate-structure.js
+PROJECT_STRUCTURE.md
+IMPLEMENTATION.md
+CLAUDE.md
