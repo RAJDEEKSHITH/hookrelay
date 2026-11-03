@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { ArrowLeftIcon, RotateCcwIcon } from "lucide-react";
+import { RotateCcwIcon } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { getDelivery, replayDelivery } from "@/apis/deliveries.api";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
+import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { AttemptsTimeline } from "@/components/deliveries/AttemptsTimeline";
 import { PayloadBlock } from "@/components/events/PayloadBlock";
@@ -11,14 +12,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
+import { formatDateTime, formatRelative } from "@/lib/format";
 import { useRequest } from "@/lib/use-request";
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="text-sm break-words">{children}</dd>
     </div>
+  );
+}
+
+function DateTime({ iso }: { iso: string }) {
+  return (
+    <>
+      <time dateTime={iso}>{formatDateTime(iso)}</time>
+      <span className="block text-xs text-muted-foreground">
+        {formatRelative(iso)}
+      </span>
+    </>
   );
 }
 
@@ -68,64 +81,69 @@ export function DeliveryDetailPage() {
   }
 
   const attempts = delivery.attempts ?? [];
+  const pending = delivery.status === "pending";
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        to="/deliveries"
-        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeftIcon className="size-4" />
-        Deliveries
-      </Link>
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-semibold">{delivery.eventType}</h1>
+      <PageHeader
+        back={{ to: "/deliveries", label: "Deliveries" }}
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            <span className="font-mono break-all">{delivery.eventType}</span>
             <StatusBadge status={delivery.status} />
-          </div>
-          <p className="text-sm break-all text-muted-foreground">
-            to {delivery.endpointUrl}
-          </p>
-        </div>
-        {/* The API allows replay only for finished deliveries; pending ones are still being retried. */}
-        {delivery.status !== "pending" && (
-          <Button
-            variant="outline"
-            disabled={replaying}
-            onClick={() => void handleReplay()}
-          >
-            {replaying ? <Spinner /> : <RotateCcwIcon />}
-            Replay
-          </Button>
-        )}
-      </div>
+          </span>
+        }
+        description={
+          <>
+            to{" "}
+            <span className="font-mono break-all text-foreground">
+              {delivery.endpointUrl}
+            </span>
+          </>
+        }
+        actions={
+          // The API allows replay only for finished deliveries; pending ones are still being retried.
+          !pending && (
+            <Button
+              variant="outline"
+              disabled={replaying}
+              onClick={() => void handleReplay()}
+            >
+              {replaying ? <Spinner /> : <RotateCcwIcon />}
+              Replay
+            </Button>
+          )
+        }
+      />
 
       <Card>
-        <CardHeader>
-          <CardTitle>Details</CardTitle>
-        </CardHeader>
         <CardContent>
-          <dl className="grid gap-4 sm:grid-cols-2">
+          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             <Detail label="Attempts">
-              {delivery.attemptCount} of {delivery.attemptLimit}
+              <span className="font-mono tabular-nums">
+                {delivery.attemptCount} of {delivery.attemptLimit}
+              </span>
             </Detail>
-            {delivery.status === "pending" ? (
+            {pending ? (
               <Detail label="Next attempt">
-                {new Date(delivery.nextAttemptAt).toLocaleString()}
+                <DateTime iso={delivery.nextAttemptAt} />
               </Detail>
             ) : (
-              <Detail label="Completed">
-                {delivery.completedAt
-                  ? new Date(delivery.completedAt).toLocaleString()
-                  : "-"}
+              <Detail label="Finished">
+                {delivery.completedAt ? (
+                  <DateTime iso={delivery.completedAt} />
+                ) : (
+                  "-"
+                )}
               </Detail>
             )}
+            <Detail label="Created">
+              <DateTime iso={delivery.createdAt} />
+            </Detail>
             <Detail label="Endpoint">
               <Link
                 to={`/endpoints/${delivery.endpointId}`}
-                className="hover:underline"
+                className="font-mono text-xs text-primary hover:underline"
               >
                 {delivery.endpointUrl}
               </Link>
@@ -133,37 +151,46 @@ export function DeliveryDetailPage() {
             <Detail label="Event">
               <Link
                 to={`/events/${delivery.eventId}`}
-                className="font-mono text-xs hover:underline"
+                className="font-mono text-xs text-primary hover:underline"
               >
                 {delivery.eventId}
               </Link>
             </Detail>
-            <Detail label="Created">
-              {new Date(delivery.createdAt).toLocaleString()}
-            </Detail>
-            <Detail label="Delivery id">
+            <Detail label="Delivery ID">
               <span className="font-mono text-xs">{delivery.id}</span>
             </Detail>
           </dl>
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-3">
-        <h2 className="font-medium">Attempts</h2>
-        {attempts.length === 0 ? (
-          <EmptyState
-            title="No attempts yet"
-            description="The first attempt runs as soon as a worker picks it up."
-          />
-        ) : (
-          <AttemptsTimeline attempts={attempts} />
-        )}
-      </div>
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle className="text-sm font-semibold">
+            Attempts
+            <span className="ml-2 font-normal text-muted-foreground">
+              {attempts.length}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {attempts.length === 0 && !pending ? (
+            <p className="text-sm text-muted-foreground">
+              No attempt was made: the endpoint was disabled or deleted before
+              the first one.
+            </p>
+          ) : (
+            <AttemptsTimeline
+              attempts={attempts}
+              nextAttemptAt={pending ? delivery.nextAttemptAt : undefined}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {delivery.event && (
         <Card>
-          <CardHeader>
-            <CardTitle>Payload</CardTitle>
+          <CardHeader className="border-b">
+            <CardTitle className="text-sm font-semibold">Payload</CardTitle>
           </CardHeader>
           <CardContent>
             <PayloadBlock payload={delivery.event.payload} />

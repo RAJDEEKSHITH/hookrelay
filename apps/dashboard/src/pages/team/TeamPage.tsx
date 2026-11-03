@@ -10,6 +10,7 @@ import {
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
+import { PageHeader } from "@/components/common/PageHeader";
 import { SecretOnceDialog } from "@/components/common/SecretOnceDialog";
 import { InviteDialog } from "@/components/team/InviteDialog";
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +24,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
+import { formatDateTime, formatRelative } from "@/lib/format";
 import { useRequest } from "@/lib/use-request";
 import { useAuthStore } from "@/store/auth-store";
 
 // MAX_USERS_PER_TENANT in @hookrelay/shared, which the dashboard may only import types from.
 const MAX_USERS_PER_TENANT = 3;
+
+const DANGER_GHOST = "text-muted-foreground hover:bg-fail-soft hover:text-fail";
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? (parts.at(-1)?.[0] ?? "") : "";
+  return (first + last).toUpperCase();
+}
 
 type Pending =
   | { kind: "remove"; user: UserDto }
@@ -113,28 +124,39 @@ export function TeamPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">Team</h1>
-          <p className="text-sm text-muted-foreground">
+      <PageHeader
+        title="Team"
+        description={
+          <>
             Up to {MAX_USERS_PER_TENANT} people per workspace; open invitations
             hold a seat.
-            {isOwner &&
-              users.data &&
-              invitations.data &&
-              ` ${seatsUsed} of ${MAX_USERS_PER_TENANT} seats used.`}
-          </p>
-        </div>
-        {isOwner && (
-          <Button onClick={() => setInviteOpen(true)}>
-            <UserPlusIcon />
-            Invite member
-          </Button>
-        )}
-      </div>
+            {isOwner && users.data && invitations.data && (
+              <span className="text-foreground">
+                {" "}
+                {seatsUsed} of {MAX_USERS_PER_TENANT} seats used.
+              </span>
+            )}
+          </>
+        }
+        actions={
+          isOwner && (
+            <Button onClick={() => setInviteOpen(true)}>
+              <UserPlusIcon />
+              Invite member
+            </Button>
+          )
+        }
+      />
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Members</h2>
+        <h2 className="text-sm font-semibold">
+          Members
+          {users.data && (
+            <span className="ml-2 font-normal text-muted-foreground">
+              {users.data.length}
+            </span>
+          )}
+        </h2>
         {users.data === null ? (
           users.loading ? (
             <LoadingState />
@@ -145,15 +167,15 @@ export function TeamPage() {
             />
           )
         ) : (
-          <div className="rounded-lg border">
+          <div className="rounded-xl border bg-card">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-4">Name</TableHead>
+                  <TableHead className="hidden sm:table-cell">Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="w-0" />
+                  <TableHead className="hidden md:table-cell">Joined</TableHead>
+                  <TableHead className="w-0 pr-4" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -161,30 +183,56 @@ export function TeamPage() {
                   const isSelf = user.id === me?.user.id;
                   return (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        {user.name}
-                        {isSelf && (
-                          <span className="text-muted-foreground"> (you)</span>
-                        )}
+                      <TableCell className="py-2.5 pl-4">
+                        <span className="flex items-center gap-3">
+                          <span
+                            aria-hidden
+                            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-medium text-muted-foreground"
+                          >
+                            {initials(user.name)}
+                          </span>
+                          <span className="flex min-w-0 flex-col">
+                            <span className="truncate font-medium">
+                              {user.name}
+                              {isSelf && (
+                                <span className="font-normal text-muted-foreground">
+                                  {" "}
+                                  (you)
+                                </span>
+                              )}
+                            </span>
+                            <span className="truncate text-xs text-muted-foreground sm:hidden">
+                              {user.email}
+                            </span>
+                          </span>
+                        </span>
                       </TableCell>
-                      <TableCell>{user.email}</TableCell>
+                      <TableCell className="hidden text-muted-foreground sm:table-cell">
+                        {user.email}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={
-                            user.role === "owner" ? "default" : "secondary"
+                            user.role === "owner" ? "outline" : "secondary"
                           }
                         >
                           {user.role === "owner" ? "Owner" : "Member"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(user.createdAt).toLocaleString()}
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                        <time
+                          dateTime={user.createdAt}
+                          title={formatDateTime(user.createdAt)}
+                        >
+                          {formatRelative(user.createdAt)}
+                        </time>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="pr-4 text-right">
                         {isOwner && user.role !== "owner" && (
                           <Button
                             variant="ghost"
                             size="sm"
+                            className={DANGER_GHOST}
                             onClick={() => ask({ kind: "remove", user })}
                           >
                             Remove
@@ -194,6 +242,7 @@ export function TeamPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            className={DANGER_GHOST}
                             onClick={() => ask({ kind: "leave", user })}
                           >
                             Leave
@@ -211,7 +260,14 @@ export function TeamPage() {
 
       {isOwner && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-medium">Open invitations</h2>
+          <h2 className="text-sm font-semibold">
+            Open invitations
+            {invitations.data && (
+              <span className="ml-2 font-normal text-muted-foreground">
+                {invitations.data.length}
+              </span>
+            )}
+          </h2>
           {invitations.data === null ? (
             invitations.loading ? (
               <LoadingState />
@@ -227,34 +283,42 @@ export function TeamPage() {
               description="Invite a member to share this workspace."
             />
           ) : (
-            <div className="rounded-lg border">
+            <div className="rounded-xl border bg-card">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Invited by</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="pl-4">Email</TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Invited by
+                    </TableHead>
                     <TableHead>Expires</TableHead>
-                    <TableHead className="w-0" />
+                    <TableHead className="w-0 pr-4" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {invitations.data.map((invitation) => (
                     <TableRow key={invitation.id}>
-                      <TableCell className="font-medium">
+                      <TableCell className="max-w-64 truncate py-2.5 pl-4 font-medium">
                         {invitation.email}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="hidden text-muted-foreground sm:table-cell">
                         {(invitation.invitedBy &&
                           nameById.get(invitation.invitedBy)) ??
                           "Former member"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(invitation.expiresAt).toLocaleString()}
+                        <time
+                          dateTime={invitation.expiresAt}
+                          title={formatDateTime(invitation.expiresAt)}
+                        >
+                          {formatRelative(invitation.expiresAt)}
+                        </time>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="pr-4 text-right">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className={DANGER_GHOST}
                           onClick={() => ask({ kind: "revoke", invitation })}
                         >
                           Revoke

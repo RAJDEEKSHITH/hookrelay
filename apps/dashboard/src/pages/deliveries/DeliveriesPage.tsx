@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { listDeliveries } from "@/apis/deliveries.api";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
+import { PageHeader } from "@/components/common/PageHeader";
 import { DeliveriesTable } from "@/components/deliveries/DeliveriesTable";
 import { Button } from "@/components/ui/button";
 import { useRequest } from "@/lib/use-request";
@@ -31,29 +32,36 @@ export function DeliveriesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">Deliveries</h1>
-          <p className="text-sm text-muted-foreground">
-            The latest 50 deliveries, newest first.
-          </p>
-        </div>
-        <div className="flex gap-1" role="group" aria-label="Filter by status">
-          {FILTERS.map((filter) => (
-            <Button
-              key={filter.label}
-              size="sm"
-              variant={filter.value === status ? "secondary" : "ghost"}
-              aria-pressed={filter.value === status}
-              onClick={() =>
-                setSearchParams(filter.value ? { status: filter.value } : {})
-              }
-            >
-              {filter.label}
-            </Button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title="Deliveries"
+        description="The latest 50 deliveries, newest first. Each one is an event on its way to one endpoint."
+        actions={
+          <div
+            className="inline-flex rounded-lg border bg-card p-0.5"
+            role="group"
+            aria-label="Filter by status"
+          >
+            {FILTERS.map((filter) => (
+              <Button
+                key={filter.label}
+                size="sm"
+                variant="ghost"
+                className={
+                  filter.value === status
+                    ? "bg-secondary text-foreground hover:bg-secondary"
+                    : "text-muted-foreground"
+                }
+                aria-pressed={filter.value === status}
+                onClick={() =>
+                  setSearchParams(filter.value ? { status: filter.value } : {})
+                }
+              >
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+        }
+      />
 
       {deliveries === null ? (
         loading ? (

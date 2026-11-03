@@ -1,5 +1,13 @@
 import type { EndpointDto } from "@hookrelay/shared";
-import { ArrowLeftIcon } from "lucide-react";
+import {
+  EllipsisIcon,
+  KeyRoundIcon,
+  PauseIcon,
+  PencilIcon,
+  PlayIcon,
+  SendIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -12,14 +20,26 @@ import {
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
+import { PageHeader } from "@/components/common/PageHeader";
 import { SecretOnceDialog } from "@/components/common/SecretOnceDialog";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EndpointFormDialog } from "@/components/endpoints/EndpointFormDialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
+import { formatDateTime, formatRelative } from "@/lib/format";
 import { useRequest } from "@/lib/use-request";
+import { cn } from "@/lib/utils";
 
 // AUTO_DISABLE_THRESHOLD in @hookrelay/shared, which the dashboard may only import types from.
 const AUTO_DISABLE_THRESHOLD = 50;
@@ -29,9 +49,70 @@ type Action = "test" | "status" | null;
 
 function Setting({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="text-sm break-words">{children}</dd>
+    </div>
+  );
+}
+
+function Chips({ items, empty }: { items: string[]; empty: string }) {
+  if (items.length === 0) {
+    return <span className="text-muted-foreground">{empty}</span>;
+  }
+  return (
+    <span className="flex flex-wrap gap-1">
+      {items.map((item) => (
+        <Badge
+          key={item}
+          variant="secondary"
+          className="font-mono text-[0.7rem] font-normal"
+        >
+          {item}
+        </Badge>
+      ))}
+    </span>
+  );
+}
+
+/** Failed attempts in a row against the auto-disable threshold: amber while recovering is likely, red past halfway. */
+function FailureMeter({ failures }: { failures: number }) {
+  const value = Math.min(failures, AUTO_DISABLE_THRESHOLD);
+  const tone =
+    failures === 0
+      ? ""
+      : failures >= AUTO_DISABLE_THRESHOLD / 2
+        ? "[&_[data-slot=progress-indicator]]:bg-fail"
+        : "[&_[data-slot=progress-indicator]]:bg-wait";
+  return (
+    <div className="flex flex-col gap-2">
+      <Progress
+        value={value}
+        max={AUTO_DISABLE_THRESHOLD}
+        getAriaValueText={() =>
+          `${failures} of ${AUTO_DISABLE_THRESHOLD} failed attempts in a row`
+        }
+        className={cn("gap-2 [&_[data-slot=progress-track]]:h-1.5", tone)}
+      >
+        <ProgressLabel className="text-sm font-normal text-muted-foreground">
+          Failed attempts in a row
+        </ProgressLabel>
+        <span
+          className={cn(
+            "ml-auto font-mono text-sm tabular-nums",
+            failures > 0 && "font-medium",
+          )}
+        >
+          {failures}
+          <span className="text-muted-foreground">
+            /{AUTO_DISABLE_THRESHOLD}
+          </span>
+        </span>
+      </Progress>
+      <p className="text-xs text-muted-foreground">
+        A successful delivery resets the count. At {AUTO_DISABLE_THRESHOLD}{" "}
+        Hookrelay disables the endpoint.
+      </p>
     </div>
   );
 }
@@ -115,92 +196,143 @@ export function EndpointDetailPage() {
   }
 
   const disabled = endpoint.status === "disabled";
+  const toggleStatus = () =>
+    void runAction("status", () => handleToggleStatus(endpoint));
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        to="/endpoints"
-        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeftIcon className="size-4" />
-        Endpoints
-      </Link>
+      <PageHeader
+        back={{ to: "/endpoints", label: "Endpoints" }}
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            <span className="font-mono break-all">{endpoint.url}</span>
+            <StatusBadge status={endpoint.status} />
+          </span>
+        }
+        description={endpoint.description ?? undefined}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              disabled={disabled || action !== null}
+              onClick={() => void runAction("test", () => handleTest(endpoint))}
+            >
+              {action === "test" ? <Spinner /> : <SendIcon />}
+              Send test event
+            </Button>
+            <Button variant="outline" onClick={() => setDialog("edit")}>
+              <PencilIcon />
+              Edit
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="More actions"
+                  />
+                }
+              >
+                {action === "status" ? <Spinner /> : <EllipsisIcon />}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setDialog("rotate")}>
+                  <KeyRoundIcon />
+                  Rotate secret
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={action !== null}
+                  onClick={toggleStatus}
+                >
+                  {disabled ? <PlayIcon /> : <PauseIcon />}
+                  {disabled ? "Enable" : "Disable"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setDialog("delete")}
+                >
+                  <Trash2Icon />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold break-all">{endpoint.url}</h1>
-          <StatusBadge status={endpoint.status} />
+      {disabled && (
+        // Enabling is the way back for a disabled endpoint, so it is offered here, not only in the menu.
+        <div
+          role="status"
+          className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex flex-col gap-1 text-sm">
+            <p className="font-medium">
+              {endpoint.consecutiveFailures >= AUTO_DISABLE_THRESHOLD
+                ? `Disabled after ${AUTO_DISABLE_THRESHOLD} failed attempts in a row`
+                : "This endpoint is disabled"}
+              {endpoint.disabledAt && (
+                <span className="font-normal text-muted-foreground">
+                  {" "}
+                  {formatRelative(endpoint.disabledAt)}
+                </span>
+              )}
+            </p>
+            <p className="text-muted-foreground">
+              It receives no new events, and its pending deliveries become dead
+              when their next attempt runs. Enabling resets the failure count
+              and circuit breaker.
+            </p>
+          </div>
+          <Button
+            className="shrink-0"
+            disabled={action !== null}
+            onClick={toggleStatus}
+          >
+            {action === "status" ? <Spinner /> : <PlayIcon />}
+            Enable
+          </Button>
         </div>
-        {endpoint.description && (
-          <p className="text-sm text-muted-foreground">
-            {endpoint.description}
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => setDialog("edit")}>
-          Edit
-        </Button>
-        <Button
-          variant="outline"
-          disabled={disabled || action !== null}
-          onClick={() => void runAction("test", () => handleTest(endpoint))}
-        >
-          {action === "test" && <Spinner />}
-          Send test event
-        </Button>
-        <Button variant="outline" onClick={() => setDialog("rotate")}>
-          Rotate secret
-        </Button>
-        <Button
-          variant="outline"
-          disabled={action !== null}
-          onClick={() =>
-            void runAction("status", () => handleToggleStatus(endpoint))
-          }
-        >
-          {action === "status" && <Spinner />}
-          {disabled ? "Enable" : "Disable"}
-        </Button>
-        <Button variant="destructive" onClick={() => setDialog("delete")}>
-          Delete
-        </Button>
-      </div>
+      )}
 
       <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
+        <CardHeader className="border-b">
+          <CardTitle className="text-sm font-semibold">
+            Delivery health
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <Setting label="Event types">
-              {endpoint.eventTypes.length === 0
-                ? "All event types"
-                : endpoint.eventTypes.join(", ")}
+          <FailureMeter failures={endpoint.consecutiveFailures} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle className="text-sm font-semibold">Settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            <Setting label="Subscribed to">
+              <Chips items={endpoint.eventTypes} empty="All event types" />
             </Setting>
             <Setting label="Max attempts per delivery">
-              {endpoint.maxAttempts}
+              <span className="font-mono">{endpoint.maxAttempts}</span>
             </Setting>
             <Setting label="Custom headers">
-              {endpoint.customHeaderNames.length === 0
-                ? "None"
-                : endpoint.customHeaderNames.join(", ")}
-            </Setting>
-            <Setting label="Failed attempts in a row">
-              {endpoint.consecutiveFailures} (auto-disabled at{" "}
-              {AUTO_DISABLE_THRESHOLD})
+              <Chips items={endpoint.customHeaderNames} empty="None" />
             </Setting>
             {endpoint.disabledAt && (
               <Setting label="Disabled at">
-                {new Date(endpoint.disabledAt).toLocaleString()}
+                {formatDateTime(endpoint.disabledAt)}
               </Setting>
             )}
             <Setting label="Created">
-              {new Date(endpoint.createdAt).toLocaleString()}
+              {formatDateTime(endpoint.createdAt)}
             </Setting>
             <Setting label="Updated">
-              {new Date(endpoint.updatedAt).toLocaleString()}
+              {formatDateTime(endpoint.updatedAt)}
             </Setting>
           </dl>
         </CardContent>

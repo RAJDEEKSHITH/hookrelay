@@ -1,17 +1,24 @@
 import type { DeliveryStatus, EndpointStatus } from "@hookrelay/shared";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type Status = EndpointStatus | DeliveryStatus;
+type Tone = "ok" | "wait" | "fail" | "neutral";
 
-const VARIANTS: Record<
-  Status,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  active: "default",
-  disabled: "secondary",
-  pending: "outline",
-  success: "default",
-  dead: "destructive",
+// A disabled endpoint is neutral, not a failure: an owner may have switched it off on purpose.
+const TONES: Record<Status, Tone> = {
+  active: "ok",
+  disabled: "neutral",
+  pending: "wait",
+  success: "ok",
+  dead: "fail",
+};
+
+const TONE_CLASSES: Record<Tone, string> = {
+  ok: "bg-ok-soft text-ok",
+  wait: "bg-wait-soft text-wait",
+  fail: "bg-fail-soft text-fail",
+  neutral: "bg-secondary text-muted-foreground",
 };
 
 const LABELS: Record<Status, string> = {
@@ -23,5 +30,10 @@ const LABELS: Record<Status, string> = {
 };
 
 export function StatusBadge({ status }: { status: Status }) {
-  return <Badge variant={VARIANTS[status]}>{LABELS[status]}</Badge>;
+  return (
+    <Badge className={cn("gap-1.5", TONE_CLASSES[TONES[status]])}>
+      <span aria-hidden className="size-1.5 rounded-full bg-current" />
+      {LABELS[status]}
+    </Badge>
+  );
 }

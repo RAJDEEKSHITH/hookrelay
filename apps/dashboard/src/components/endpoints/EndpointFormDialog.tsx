@@ -49,6 +49,10 @@ function parseHeaders(text: string): Record<string, string> | null {
   return headers;
 }
 
+function Optional() {
+  return <span className="font-normal text-muted-foreground">(optional)</span>;
+}
+
 function parseEventTypes(text: string): string[] {
   return text.split(/[\s,]+/).filter((type) => type !== "");
 }
@@ -145,54 +149,78 @@ function EndpointForm({
           required
           maxLength={1024}
           placeholder="https://example.com/webhooks"
+          className="font-mono text-[0.8rem] placeholder:font-sans placeholder:text-sm"
           value={url}
           onChange={(event) => setUrl(event.target.value)}
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="endpoint-description">Description</Label>
+        <Label htmlFor="endpoint-description">
+          Description <Optional />
+        </Label>
         <Textarea
           id="endpoint-description"
           maxLength={6000}
+          className="min-h-16"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="endpoint-event-types">Event types</Label>
-        <Input
-          id="endpoint-event-types"
-          placeholder="order.created, order.paid"
-          value={eventTypes}
-          onChange={(event) => setEventTypes(event.target.value)}
-        />
-        <p className="text-xs text-muted-foreground">
-          Comma separated. Leave empty to receive every event type.
-        </p>
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="endpoint-event-types">
+            Event types <Optional />
+          </Label>
+          <Input
+            id="endpoint-event-types"
+            placeholder="order.created, order.paid"
+            className="font-mono text-[0.8rem] placeholder:font-sans placeholder:text-sm"
+            aria-describedby="endpoint-event-types-hint"
+            value={eventTypes}
+            onChange={(event) => setEventTypes(event.target.value)}
+          />
+          <p
+            id="endpoint-event-types-hint"
+            className="text-xs text-muted-foreground"
+          >
+            Comma separated. Leave empty to receive every event type.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="endpoint-max-attempts">Max attempts</Label>
+          <Input
+            id="endpoint-max-attempts"
+            type="number"
+            required
+            min={1}
+            max={MAX_ATTEMPTS_LIMIT}
+            className="font-mono"
+            aria-describedby="endpoint-max-attempts-hint"
+            value={maxAttempts}
+            onChange={(event) => setMaxAttempts(event.target.value)}
+          />
+          <p
+            id="endpoint-max-attempts-hint"
+            className="text-xs text-muted-foreground"
+          >
+            1 to {MAX_ATTEMPTS_LIMIT}
+          </p>
+        </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="endpoint-max-attempts">Max attempts</Label>
-        <Input
-          id="endpoint-max-attempts"
-          type="number"
-          required
-          min={1}
-          max={MAX_ATTEMPTS_LIMIT}
-          value={maxAttempts}
-          onChange={(event) => setMaxAttempts(event.target.value)}
-        />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="endpoint-headers">Custom headers</Label>
+        <Label htmlFor="endpoint-headers">
+          Custom headers <Optional />
+        </Label>
         <Textarea
           id="endpoint-headers"
           placeholder={"authorization: Bearer abc123\nx-team: payments"}
-          className="font-mono text-xs"
+          className="min-h-16 font-mono text-xs"
+          aria-describedby="endpoint-headers-hint"
           disabled={clearHeaders}
           value={headersText}
           onChange={(event) => setHeadersText(event.target.value)}
         />
-        <p className="text-xs text-muted-foreground">
+        <p id="endpoint-headers-hint" className="text-xs text-muted-foreground">
           One "name: value" per line, stored encrypted.
           {currentHeaderNames.length > 0 &&
             ` Current: ${currentHeaderNames.join(", ")}. Leave empty to keep them; anything entered replaces them.`}

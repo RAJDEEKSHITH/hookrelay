@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { RelayMark } from "@/components/common/RelayMark";
 import {
   Card,
   CardContent,
@@ -23,19 +24,26 @@ export function AuthCard({
   footer,
 }: AuthCardProps) {
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
+    // min-h-svh with the content centred: the page still scrolls normally when the form is taller than the screen.
+    <main className="flex min-h-svh flex-col items-center justify-center gap-6 px-4 py-10">
+      <div className="flex items-center gap-2.5">
+        <RelayMark className="size-7" />
+        <span className="text-lg font-semibold tracking-tight">Hookrelay</span>
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>{title}</CardTitle>
+          <CardTitle className="text-lg font-semibold tracking-tight">
+            {title}
+          </CardTitle>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>{children}</CardContent>
         {footer && (
-          <CardFooter className="justify-center text-sm text-muted-foreground">
+          <CardFooter className="justify-center border-t text-sm text-muted-foreground">
             {footer}
           </CardFooter>
         )}
       </Card>
-    </div>
+    </main>
   );
 }

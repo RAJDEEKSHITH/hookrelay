@@ -1,8 +1,10 @@
+import { SearchIcon } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { listEvents } from "@/apis/events.api";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
+import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatRelative } from "@/lib/format";
 import { useRequest } from "@/lib/use-request";
 
 export function EventsPage() {
@@ -33,26 +36,34 @@ export function EventsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">Events</h1>
-          <p className="text-sm text-muted-foreground">
-            The latest 50 events, newest first.
-          </p>
-        </div>
-        <form onSubmit={handleFilter} className="flex gap-2">
-          <Input
-            aria-label="Event type"
-            placeholder="Filter by type, e.g. order.created"
-            className="w-64"
-            value={typeInput}
-            onChange={(event) => setTypeInput(event.target.value)}
-          />
-          <Button type="submit" variant="outline">
-            Filter
-          </Button>
-        </form>
-      </div>
+      <PageHeader
+        title="Events"
+        description="The latest 50 events your backend sent, newest first."
+        actions={
+          <form
+            onSubmit={handleFilter}
+            role="search"
+            className="flex w-full gap-2 sm:w-auto"
+          >
+            <div className="relative flex-1 sm:w-72 sm:flex-none">
+              <SearchIcon
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                aria-label="Event type"
+                placeholder="Filter by type, e.g. order.created"
+                className="bg-card pl-8 font-mono text-[0.8rem] placeholder:font-sans placeholder:text-sm"
+                value={typeInput}
+                onChange={(event) => setTypeInput(event.target.value)}
+              />
+            </div>
+            <Button type="submit" variant="outline">
+              Filter
+            </Button>
+          </form>
+        }
+      />
 
       {events === null ? (
         loading ? (
@@ -73,31 +84,38 @@ export function EventsPage() {
           }
         />
       ) : (
-        <div className="rounded-lg border">
+        <div className="rounded-xl border bg-card">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Idempotency key</TableHead>
-                <TableHead>Created</TableHead>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-4">Type</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Idempotency key
+                </TableHead>
+                <TableHead className="pr-4 text-right sm:text-left">
+                  Received
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {events.map((event) => (
-                <TableRow key={event.id}>
-                  <TableCell>
+                // The type link covers the whole row: one click target, one tab stop.
+                <TableRow key={event.id} className="relative">
+                  <TableCell className="max-w-72 py-2.5 pl-4">
                     <Link
                       to={`/events/${event.id}`}
-                      className="font-medium hover:underline"
+                      className="block truncate font-mono text-[0.8rem] font-medium outline-none after:absolute after:inset-0 after:rounded-sm focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
                     >
                       {event.type}
                     </Link>
                   </TableCell>
-                  <TableCell className="max-w-xs truncate font-mono text-xs text-muted-foreground">
+                  <TableCell className="hidden max-w-xs truncate font-mono text-xs text-muted-foreground sm:table-cell">
                     {event.idempotencyKey}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(event.createdAt).toLocaleString()}
+                  <TableCell className="pr-4 text-right text-muted-foreground sm:text-left">
+                    <time dateTime={event.createdAt}>
+                      {formatRelative(event.createdAt)}
+                    </time>
                   </TableCell>
                 </TableRow>
               ))}
