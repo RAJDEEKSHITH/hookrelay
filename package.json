@@ -1,17 +1,26 @@
 {
   "name": "hookrelay",
   "private": true,
+  "type": "module",
   "scripts": {
-    "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @hookrelay/db db:generate",
+    "db:migrate": "pnpm --filter @hookrelay/db db:migrate",
+    "demo": "tsx --env-file=.env scripts/demo.ts",
+    "load-test": "tsx --env-file=.env scripts/load-test.ts",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "prettier": "3.9.6",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
     "turbo": "^2.11.10",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vitest": "~5.0.5"
   },
   "packageManager": "pnpm@11.25.0",
   "engines": {

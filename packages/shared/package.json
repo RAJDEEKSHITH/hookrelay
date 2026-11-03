@@ -1,8 +1,5 @@
 {
   "name": "@hookrelay/shared",
   "version": "1.0.0",
-  "private": true,
-  "devDependencies": {
-    "typescript": "7.0.2"
-  }
+  "private": true
 }
