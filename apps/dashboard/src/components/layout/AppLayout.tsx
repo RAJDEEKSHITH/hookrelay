@@ -14,6 +14,8 @@ import {
 import { useAuthStore } from "@/store/auth-store";
 
 const NAV_ITEMS = [
+  // `end` keeps "/" from matching every page.
+  { to: "/", label: "Overview", end: true },
   { to: "/endpoints", label: "Endpoints" },
   { to: "/events", label: "Events" },
   { to: "/deliveries", label: "Deliveries" },
@@ -45,6 +47,7 @@ export function AppLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end}
                 className={({ isActive }) =>
                   `rounded-md px-3 py-1.5 text-sm whitespace-nowrap transition-colors ${
                     isActive

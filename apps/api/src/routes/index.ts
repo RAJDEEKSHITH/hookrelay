@@ -6,6 +6,7 @@ import { endpointsRouter } from "./endpoints.routes";
 import { eventsRouter } from "./events.routes";
 import { healthRouter } from "./health.routes";
 import { invitationsRouter } from "./invitations.routes";
+import { statsRouter } from "./stats.routes";
 import { teamRouter } from "./team.routes";
 
 export const routes = Router();
@@ -18,3 +19,4 @@ routes.use("/v1/api-keys", apiKeysRouter);
 routes.use("/v1/endpoints", endpointsRouter);
 routes.use("/v1/events", eventsRouter);
 routes.use("/v1/deliveries", deliveriesRouter);
+routes.use("/v1/stats", statsRouter);

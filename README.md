@@ -153,7 +153,7 @@ TypeScript (strict) on Node.js 24, pnpm workspaces + Turborepo. API: Express 5, 
 pino. Queue: BullMQ on Redis 8. Dashboard: React, Vite, Tailwind, shadcn/ui on Base UI, zustand, react-router.
 
 ```
-apps/api            Express API: auth, team, API keys, endpoints, ingest, deliveries, replay
+apps/api            Express API: auth, team, API keys, endpoints, ingest, deliveries, replay, stats
 apps/worker         BullMQ worker: signed delivery, retry policy, circuit breaker, outbox sweeper
 apps/dashboard      React dashboard
 apps/demo-receiver  a misbehaving receiver for demos and tests
