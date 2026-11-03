@@ -18,3 +18,7 @@ export const passwordSchema = z
   .refine((value) => Buffer.byteLength(value, "utf8") <= 72, "Password must be at most 72 bytes");
 
 export const nameSchema = z.string().trim().min(1).max(128);
+
+export const eventTypeSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9_.-]{1,128}$/, "Event types are 1 to 128 characters: letters, digits, '_', '.', '-'");
