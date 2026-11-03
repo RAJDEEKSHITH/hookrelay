@@ -1,5 +1,21 @@
 {
   "name": "@hookrelay/worker",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hookrelay/db": "workspace:*",
+    "@hookrelay/queue": "workspace:*",
+    "@hookrelay/shared": "workspace:*",
+    "@hookrelay/webhook-core": "workspace:*",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
+  }
 }

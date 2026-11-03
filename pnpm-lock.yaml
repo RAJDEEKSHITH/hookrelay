@@ -80,7 +80,26 @@ importers:
 
   apps/demo-receiver: {}
 
-  apps/worker: {}
+  apps/worker:
+    dependencies:
+      '@hookrelay/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@hookrelay/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
+      '@hookrelay/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@hookrelay/webhook-core':
+        specifier: workspace:*
+        version: link:../../packages/webhook-core
+      pino:
+        specifier: ^10.4.0
+        version: 10.4.0
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
   packages/db:
     dependencies:
