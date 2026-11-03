@@ -1,4 +1,5 @@
 import { CopyIcon } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +26,10 @@ export function SecretOnceDialog({
   description,
   onClose,
 }: SecretOnceDialogProps) {
+  // Keeps showing the last secret while the dialog animates closed (secret is already null by then).
+  const [shown, setShown] = useState(secret);
+  if (secret !== null && secret !== shown) setShown(secret);
+
   async function copy(value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -48,14 +53,14 @@ export function SecretOnceDialog({
         </DialogHeader>
         <div className="flex items-center gap-2">
           <code className="min-w-0 flex-1 rounded-md bg-muted px-3 py-2 font-mono text-xs break-all select-all">
-            {secret}
+            {shown}
           </code>
-          {secret !== null && (
+          {shown !== null && (
             <Button
               variant="outline"
               size="icon"
               aria-label="Copy"
-              onClick={() => void copy(secret)}
+              onClick={() => void copy(shown)}
             >
               <CopyIcon />
             </Button>
