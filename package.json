@@ -11,6 +11,7 @@
     "db:migrate": "pnpm --filter @hookrelay/db db:migrate",
     "demo": "tsx --env-file=.env scripts/demo.ts",
     "load-test": "tsx --env-file=.env scripts/load-test.ts",
+    "load-test:k6": "k6 run scripts/load-test.k6.js",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
   },
   "devDependencies": {
