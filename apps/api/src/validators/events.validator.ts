@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { eventTypeSchema } from "./common.validator";
+import { eventTypeSchema, limitSchema } from "./common.validator";
+
+export const listEventsQuerySchema = z.object({
+  type: eventTypeSchema.optional(),
+  limit: limitSchema,
+});
+export type ListEventsQuery = z.infer<typeof listEventsQuerySchema>;
 
 export const ingestEventSchema = z.object({
   type: eventTypeSchema,

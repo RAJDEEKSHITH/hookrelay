@@ -1,11 +1,48 @@
 import { randomUUID } from "node:crypto";
-import { and, deliveries, endpoints, eq, events, isNull, sql } from "@hookrelay/db";
-import type { EventIngestDto } from "@hookrelay/shared";
+import { and, deliveries, desc, endpoints, eq, events, isNull, sql } from "@hookrelay/db";
+import type { EventDto, EventIngestDto } from "@hookrelay/shared";
 import { stableStringify } from "@hookrelay/webhook-core";
 import { AppError } from "../utils/app-error";
 import { db } from "../utils/db";
-import type { IngestEventInput } from "../validators/events.validator";
-import { enqueueFirstAttempts } from "./deliveries.service";
+import type { IngestEventInput, ListEventsQuery } from "../validators/events.validator";
+import { enqueueFirstAttempts, listEventDeliveries } from "./deliveries.service";
+
+const listColumns = {
+  id: events.id,
+  type: events.eventType,
+  idempotencyKey: events.idempotencyKey,
+  createdAt: events.createdAt,
+};
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Lists leave out the payload (up to 256 KB each); only the detail includes it. */
+export async function listEvents(tenantId: string, query: ListEventsQuery): Promise<EventDto[]> {
+  const rows = await db
+    .select(listColumns)
+    .from(events)
+    .where(and(eq(events.tenantId, tenantId), query.type ? eq(events.eventType, query.type) : undefined))
+    .orderBy(desc(events.createdAt), desc(events.id))
+    .limit(query.limit);
+  return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
+}
+
+export async function getEvent(tenantId: string, id: string): Promise<EventDto> {
+  const [row] = await db
+    .select({ ...listColumns, payload: events.payload })
+    .from(events)
+    .where(and(eq(events.id, id), eq(events.tenantId, tenantId)));
+  if (!row) throw new AppError(404, "not_found", "Event not found");
+  return {
+    ...row,
+    // The database only accepts JSON objects (events_payload_object); the guard just narrows the type.
+    payload: isJsonObject(row.payload) ? row.payload : {},
+    createdAt: row.createdAt.toISOString(),
+    deliveries: await listEventDeliveries(tenantId, id),
+  };
+}
 
 /**
  * Stores the event and one pending delivery per matching endpoint in a single transaction (the outbox), then

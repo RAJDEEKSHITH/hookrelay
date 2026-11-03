@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { apiKeysRouter } from "./api-keys.routes";
 import { authRouter } from "./auth.routes";
+import { deliveriesRouter } from "./deliveries.routes";
 import { endpointsRouter } from "./endpoints.routes";
 import { eventsRouter } from "./events.routes";
 import { healthRouter } from "./health.routes";
@@ -16,3 +17,4 @@ routes.use("/v1/invitations", invitationsRouter);
 routes.use("/v1/api-keys", apiKeysRouter);
 routes.use("/v1/endpoints", endpointsRouter);
 routes.use("/v1/events", eventsRouter);
+routes.use("/v1/deliveries", deliveriesRouter);

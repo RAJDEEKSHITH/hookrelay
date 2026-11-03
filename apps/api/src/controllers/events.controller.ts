@@ -1,8 +1,21 @@
-import type { ApiDataBody, EventIngestDto } from "@hookrelay/shared";
+import type { ApiDataBody, EventDto, EventIngestDto } from "@hookrelay/shared";
 import type { Request, Response } from "express";
+import { getAuth } from "../middlewares/auth.middleware";
 import * as eventsService from "../services/events.service";
 import { AppError } from "../utils/app-error";
-import { idempotencyKeySchema, type IngestEventInput } from "../validators/events.validator";
+import type { IdParams } from "../validators/common.validator";
+import { idempotencyKeySchema, type IngestEventInput, type ListEventsQuery } from "../validators/events.validator";
+
+export async function listEvents(
+  req: Request<Record<string, string>, unknown, unknown, ListEventsQuery>,
+  res: Response<ApiDataBody<EventDto[]>>,
+): Promise<void> {
+  res.status(200).json({ data: await eventsService.listEvents(getAuth(req).tenantId, req.query) });
+}
+
+export async function getEvent(req: Request<IdParams>, res: Response<ApiDataBody<EventDto>>): Promise<void> {
+  res.status(200).json({ data: await eventsService.getEvent(getAuth(req).tenantId, req.params.id) });
+}
 
 export async function ingestEvent(
   req: Request<Record<string, string>, unknown, IngestEventInput>,
