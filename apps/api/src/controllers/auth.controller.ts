@@ -6,7 +6,7 @@ import { clearSessionCookie, readSessionCookie, setSessionCookie } from "../util
 import type { LoginInput, RegisterInput } from "../validators/auth.validator";
 
 export async function register(
-  req: Request<Record<string, never>, ApiDataBody<MeDto>, RegisterInput>,
+  req: Request<Record<string, string>, unknown, RegisterInput>,
   res: Response<ApiDataBody<MeDto>>,
 ): Promise<void> {
   const { sessionId, me } = await authService.register(req.body);
@@ -15,7 +15,7 @@ export async function register(
 }
 
 export async function login(
-  req: Request<Record<string, never>, ApiDataBody<MeDto>, LoginInput>,
+  req: Request<Record<string, string>, unknown, LoginInput>,
   res: Response<ApiDataBody<MeDto>>,
 ): Promise<void> {
   const { sessionId, me } = await authService.login(req.body);

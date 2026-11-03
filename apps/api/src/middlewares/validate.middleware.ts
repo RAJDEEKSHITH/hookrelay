@@ -1,19 +1,32 @@
 import type { ApiErrorDetail } from "@hookrelay/shared";
-import type { RequestHandler } from "express";
+import type { Request, RequestHandler } from "express";
 import type { z } from "zod";
 import { AppError } from "../utils/app-error";
 
-interface RequestSchemas {
-  body?: z.ZodType;
-  query?: z.ZodType;
-  params?: z.ZodType;
-}
+type Output<TSchema, TFallback> = TSchema extends z.ZodType ? z.output<TSchema> : TFallback;
 
-type Part = keyof RequestSchemas;
+type Part = "params" | "query" | "body";
 
-/** Parses each part with zod and puts the parsed (coerced, defaulted) values back on the request. */
-export function validate(schemas: RequestSchemas): RequestHandler {
-  return async (req, _res, next) => {
+/**
+ * Parses each part with zod and puts the parsed (coerced, defaulted) values back on the request.
+ * The returned handler is typed with the schemas' output types, so Express infers the same Params/Body/Query
+ * for the controller after it (Request<IdParams, unknown, Body, Query>) and controllers never re-parse.
+ */
+export function validate<
+  TParams extends z.ZodType | undefined = undefined,
+  TQuery extends z.ZodType | undefined = undefined,
+  TBody extends z.ZodType | undefined = undefined,
+>(schemas: {
+  params?: TParams;
+  query?: TQuery;
+  body?: TBody;
+}): RequestHandler<
+  Output<TParams, Request["params"]>,
+  unknown,
+  Output<TBody, unknown>,
+  Output<TQuery, Request["query"]>
+> {
+  const handler: RequestHandler = async (req, _res, next) => {
     const details: ApiErrorDetail[] = [];
     const parsed: Partial<Record<Part, unknown>> = {};
 
@@ -36,10 +49,17 @@ export function validate(schemas: RequestSchemas): RequestHandler {
     }
 
     if ("body" in parsed) req.body = parsed.body;
-    // The controller's Request<Params, ...> generic gives these their real type; zod has just produced them.
-    if ("params" in parsed) req.params = parsed.params as typeof req.params;
+    // Plain assignment; Reflect.set because this untyped handler sees params as Record<string, string>.
+    if ("params" in parsed) Reflect.set(req, "params", parsed.params);
     // Express 5 defines req.query as a getter, so it cannot be assigned.
     if ("query" in parsed) Object.defineProperty(req, "query", { value: parsed.query });
     next();
   };
+  // The values on the request were just produced by these schemas, which is exactly what the generic claims.
+  return handler as RequestHandler<
+    Output<TParams, Request["params"]>,
+    unknown,
+    Output<TBody, unknown>,
+    Output<TQuery, Request["query"]>
+  >;
 }

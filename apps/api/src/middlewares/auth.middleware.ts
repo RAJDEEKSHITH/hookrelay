@@ -20,8 +20,11 @@ export const requireSession: RequestHandler = async (req, _res, next) => {
   next();
 };
 
-/** For controllers behind requireSession: req.auth is optional in the Request type, so this narrows it. */
-export function getAuth(req: Request): AuthContext {
+/**
+ * For controllers behind requireSession: req.auth is optional in the Request type, so this narrows it.
+ * Takes any request shape so controllers typed with Request<Params, ..., Query> generics can pass theirs.
+ */
+export function getAuth(req: Pick<Request, "auth">): AuthContext {
   if (!req.auth) throw notLoggedIn();
   return req.auth;
 }
